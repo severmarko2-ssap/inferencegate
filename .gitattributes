@@ -1,0 +1,12 @@
+# Treat PDFs as binary
+*.pdf binary
+
+# Images as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.svg binary
+
+# Default text handling
+* text=auto
