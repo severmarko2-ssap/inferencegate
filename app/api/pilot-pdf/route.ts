@@ -25,22 +25,22 @@ export async function POST(req: Request) {
       return json({ ok: false, error: "Please provide a valid email." }, 400);
     }
 
-    // ---------- send lead email (Option A: inbox list) ----------
-    const host = process.env.SMTP_HOST;
+    // ----- optional: send lead email (keeps your existing behavior) -----
+    const host = process.env.SMTP_HOST || "";
     const port = Number(process.env.SMTP_PORT || "587");
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    const user = process.env.SMTP_USER || "";
+    const pass = process.env.SMTP_PASS || "";
+    const to = process.env.LEADS_TO || process.env.SMTP_TO || "marko@ssap.io";
+    const from = process.env.SMTP_FROM || user || "marko@ssap.io";
 
-    const to = process.env.PDF_LEAD_TO || "marko@ssap.io";
-    const from = process.env.PDF_LEAD_FROM || user || "no-reply@ssap.io";
-
-    const ua = req.headers.get("user-agent") || "";
+    // grab basic request metadata (best-effort)
     const ip =
-      req.headers.get("x-forwarded-for") ||
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       req.headers.get("x-real-ip") ||
       "";
+    const ua = req.headers.get("user-agent") || "";
 
-    // Best-effort: if SMTP not configured, do NOT block download
+    // Only try sending if SMTP config exists
     if (host && user && pass) {
       const transporter = nodemailer.createTransport({
         host,
@@ -70,9 +70,14 @@ export async function POST(req: Request) {
       });
     }
 
-    // ---------- return PDF download ----------
-    const FILE_NAME = "inferencegate-pilot-pricing.pdf";
-    const PDF_PATH = path.join(process.cwd(), "public", FILE_NAME);
+    // ---------- return NEW SSAP PDF ----------
+    const FILE_NAME = "SSAP-Technical-Overview.pdf";
+    const PDF_PATH = path.join(
+      process.cwd(),
+      "public",
+      "pdfs",
+      FILE_NAME
+    );
 
     const file = await fs.readFile(PDF_PATH);
 
