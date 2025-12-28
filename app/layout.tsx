@@ -1,4 +1,3 @@
-// app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
 
@@ -6,15 +5,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://ssap.io"),
 
   title: {
-    default: "InferenceGate by SSAP",
-    template: "%s • InferenceGate by SSAP",
+    default: "SSAP Decision System",
+    template: "%s • SSAP",
   },
 
-  // A3: Updated to “Inference Governance” positioning (cost savings as consequence)
   description:
-    "InferenceGate turns inference from an uncontrolled side-effect into a governed system — with deterministic decision paths, audit-friendly telemetry, stable latency, and continuous quality monitoring. Cost savings are the consequence.",
+    "A decision system for modern AI. Decide when AI should act, when to try cheaply, and when not to act at all. Built for governance: no raw prompts or completions stored by default.",
 
-  applicationName: "InferenceGate",
+  applicationName: "SSAP Decision System",
 
   alternates: {
     canonical: "https://ssap.io/",
@@ -35,41 +33,36 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://ssap.io/",
-    siteName: "SSAP",
-    title: "InferenceGate by SSAP",
-    // A3: Updated OG copy
+    title: "SSAP Decision System",
     description:
-      "Inference governance for production AI. Policy-driven routing with deterministic decision paths, audit-friendly telemetry, stable latency, and SS3 shadow QA — with cost savings as a consequence.",
+      "A decision system for modern AI. Decide when AI should act, when to try cheaply, and when not to act at all. Built for governance: no raw prompts or completions stored by default.",
+    siteName: "SSAP",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "InferenceGate by SSAP",
+        alt: "SSAP Decision System",
       },
     ],
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "InferenceGate by SSAP",
-    // A3: Updated Twitter copy
+    title: "SSAP Decision System",
     description:
-      "Inference governance for production AI. Policy-driven routing with deterministic decision paths, audit-friendly telemetry, stable latency, and SS3 shadow QA — with cost savings as a consequence.",
+      "A decision system for modern AI. Decide when AI should act, when to try cheaply, and when not to act at all. Built for governance: no raw prompts or completions stored by default.",
     images: ["/og.png"],
   },
 
   icons: {
-    // trenutno OBAVEZNO
-    shortcut: ["/favicon.ico"],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-
-    // spremno za kasnije (ne smeta ako još ne postoji)
     icon: [
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico" },
       { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
     ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
 
   manifest: "/site.webmanifest",
@@ -77,11 +70,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className="font-sans" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );
