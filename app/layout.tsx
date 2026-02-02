@@ -5,53 +5,42 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://ssap.io"),
 
   title: {
-    default: "SSAP Decision System",
+    default: "SSAP — Decision layer for AI systems",
     template: "%s • SSAP",
   },
 
   description:
-    "A decision system for modern AI. Decide when AI should act, when to try cheaply, and when not to act at all. Built for governance: no raw prompts or completions stored by default.",
+    "SSAP is a decision layer that decides before every AI call. Run, block, escalate — with full audit trail and EU AI Act compliance.",
 
-  applicationName: "SSAP Decision System",
-
-  alternates: {
-    canonical: "https://ssap.io/",
-  },
+  alternates: { canonical: "https://ssap.io/" },
 
   robots: {
     index: true,
     follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-      "max-video-preview": -1,
-    },
   },
 
   openGraph: {
     type: "website",
     url: "https://ssap.io/",
-    title: "SSAP Decision System",
+    title: "SSAP — Decision layer for AI systems",
     description:
-      "A decision system for modern AI. Decide when AI should act, when to try cheaply, and when not to act at all. Built for governance: no raw prompts or completions stored by default.",
+      "SSAP is a decision layer that decides before every AI call. Run, block, escalate — with full audit trail and EU AI Act compliance.",
     siteName: "SSAP",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "SSAP Decision System",
+        alt: "SSAP — Decision layer for AI systems",
       },
     ],
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "SSAP Decision System",
+    title: "SSAP — Decision layer for AI systems",
     description:
-      "A decision system for modern AI. Decide when AI should act, when to try cheaply, and when not to act at all. Built for governance: no raw prompts or completions stored by default.",
+      "SSAP is a decision layer that decides before every AI call. EU AI Act compliant.",
     images: ["/og.png"],
   },
 
@@ -66,9 +55,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body>{children}</body>

@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 data/
 
+
+.claude/
+claude.exe
+SSAP_End_to_End_System_Summary.pdf
