@@ -12,158 +12,161 @@ export default function Home() {
   const [cEmail, setCEmail] = useState("");
   const [cCompany, setCCompany] = useState("");
   const [cMsg, setCMsg] = useState("");
-  const [cSubmitting, setCSubmitting] = useState(false);
-  const [cErr, setCErr] = useState<string | null>(null);
-  const [cOk, setCOk] = useState<string | null>(null);
-  const [hp, setHp] = useState(""); // honeypot
+  const [cStatus, setCStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [cError, setCError] = useState<string | null>(null);
 
-  const contactEmailRef = useRef<HTMLInputElement | null>(null);
+  // PDF modal (lead gate) state
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [pdfEmail, setPdfEmail] = useState("");
+  const [pdfStatus, setPdfStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
-  const contactEmailOk = useMemo(() => isValidEmail(cEmail), [cEmail]);
-  const contactCompanyOk = useMemo(
-    () => cCompany.trim().length >= 2,
-    [cCompany]
-  );
-  const contactMsgOk = useMemo(() => cMsg.trim().length >= 10, [cMsg]);
-
-  const contactFormOk = useMemo(
-    () => contactEmailOk && contactCompanyOk && contactMsgOk,
-    [contactEmailOk, contactCompanyOk, contactMsgOk]
-  );
+  const contactRef = useRef<HTMLElement | null>(null);
 
   const goToContact = useCallback(() => {
-    const el = document.getElementById("contact");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      setTimeout(() => contactEmailRef.current?.focus(), 250);
+    if (contactRef.current) {
+      contactRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      const el = document.getElementById("contact");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
 
-  // JSON-LD (SEO)
-  const jsonLd = useMemo(() => {
-    const org = {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      name: "SSAP",
-      url: "https://ssap.io",
-      email: "marko@ssap.io",
-    };
-
-    const app = {
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      name: "SSAP InferenceGate",
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "All",
-      url: "https://ssap.io",
-      description:
-        "SSAP is a decision layer for AI systems. It decides before every inference call — run, block, or escalate. EU AI Act compliant.",
-      publisher: {
-        "@type": "Organization",
-        name: "SSAP",
-        url: "https://ssap.io",
-      },
-    };
-
-    return JSON.stringify([org, app]);
+  const openPdf = useCallback(() => {
+    setPdfOpen(true);
+    setPdfStatus("idle");
+    setPdfError(null);
   }, []);
 
-  const submitContact = useCallback(async () => {
-    setCErr(null);
-    setCOk(null);
+  const closePdf = useCallback(() => {
+    setPdfOpen(false);
+    setPdfEmail("");
+    setPdfStatus("idle");
+    setPdfError(null);
+  }, []);
 
-    if (hp.trim().length > 0) {
-      setCOk("Thanks — message sent.");
+  const contactPayload = useMemo(() => {
+    return {
+      email: cEmail.trim(),
+      company: cCompany.trim(),
+      message: cMsg.trim(),
+      source: "ssap.io",
+    };
+  }, [cEmail, cCompany, cMsg]);
+
+  const sendContact = useCallback(async () => {
+    setCError(null);
+
+    if (!isValidEmail(cEmail)) {
+      setCError("Please enter a valid email.");
+      setCStatus("error");
+      return;
+    }
+    if (!cCompany.trim()) {
+      setCError("Please enter your company.");
+      setCStatus("error");
+      return;
+    }
+    if (!cMsg.trim()) {
+      setCError("Please enter a message.");
+      setCStatus("error");
       return;
     }
 
-    if (!contactFormOk) {
-      setCErr("Please fill all required fields correctly.");
-      return;
-    }
-
-    setCSubmitting(true);
     try {
+      setCStatus("sending");
       const res = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: cEmail.trim(),
-          company: cCompany.trim(),
-          message: cMsg.trim(),
-        }),
+        body: JSON.stringify(contactPayload),
       });
-
       if (!res.ok) {
-        const j = await res.json().catch(() => null);
-        throw new Error(j?.error || "Message failed to send");
+        const t = await res.text();
+        throw new Error(t || "Request failed");
       }
-
-      setCOk("Message sent. We'll reply by email.");
-      setCEmail("");
-      setCCompany("");
-      setCMsg("");
-      setHp("");
+      setCStatus("sent");
     } catch (e: any) {
-      setCErr(e?.message || "Message failed to send.");
-    } finally {
-      setCSubmitting(false);
+      setCStatus("error");
+      setCError(e?.message || "Something went wrong.");
     }
-  }, [hp, contactFormOk, cEmail, cCompany, cMsg]);
+  }, [cEmail, cCompany, cMsg, contactPayload]);
+
+  const sendPdf = useCallback(async () => {
+    setPdfError(null);
+
+    if (!isValidEmail(pdfEmail)) {
+      setPdfError("Please enter a valid email.");
+      setPdfStatus("error");
+      return;
+    }
+
+    try {
+      setPdfStatus("sending");
+      const res = await fetch("/api/pilot-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pdfEmail.trim(), source: "ssap.io" }),
+      });
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || "Request failed");
+      }
+      setPdfStatus("sent");
+    } catch (e: any) {
+      setPdfStatus("error");
+      setPdfError(e?.message || "Something went wrong.");
+    }
+  }, [pdfEmail]);
 
   return (
-    <main className="min-h-screen">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLd }}
-      />
-
-      {/* NAV */}
-      <header className="border-b border-zinc-200 bg-white/80 backdrop-blur sticky top-0 z-50">
-        <div className="container py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <main suppressHydrationWarning>
+      {/* HEADER */}
+      <header className="border-b border-zinc-200 bg-white">
+        <div className="container py-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <Image
               src="/ssap-logo.png"
-              alt="SS/AP"
-              width={160}
-              height={40}
+              alt="SSAP"
+              width={96}
+              height={32}
               className="h-8 w-auto"
               priority
             />
-            <div className="leading-tight">
-              <div className="text-sm font-semibold tracking-tight text-zinc-900">
-                SSAP
-              </div>
-              <div className="text-xs text-zinc-600">InferenceGate</div>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-semibold text-zinc-900">SSAP</span>
+              <span className="text-xs text-zinc-500">InferenceGate</span>
             </div>
           </div>
-
-          <nav className="flex items-center gap-6 text-sm">
-            <a href="#problem" className="hidden md:inline no-underline hover:underline">
-              Problem
-            </a>
-            <a href="#architecture" className="hidden md:inline no-underline hover:underline">
-              Architecture
-            </a>
-            <a href="#decisions" className="hidden md:inline no-underline hover:underline">
-              Decisions
-            </a>
-            <a href="#eu-ai-act" className="hidden md:inline no-underline hover:underline">
-              EU AI Act
-            </a>
-            <a href="#contact" className="hidden md:inline no-underline hover:underline">
-              Contact
-            </a>
-
+          <div className="flex items-center gap-4">
+            <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-700">
+              <a className="no-underline hover:text-zinc-900 font-semibold" href="#interdict">
+                Interdict
+              </a>
+              <a className="no-underline hover:text-zinc-900" href="#problem">
+                Problem
+              </a>
+              <a className="no-underline hover:text-zinc-900" href="#how">
+                Architecture
+              </a>
+              <a className="no-underline hover:text-zinc-900" href="#what">
+                Decisions
+              </a>
+              <a className="no-underline hover:text-zinc-900" href="#what">
+                EU AI Act
+              </a>
+              <a className="no-underline hover:text-zinc-900" href="#contact">
+                Contact
+              </a>
+            </nav>
             <a
               href="https://app.ssap.io"
-              className="btn no-underline"
+              className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold border border-white bg-white text-zinc-900 hover:bg-zinc-100 transition-colors no-underline"
               target="_blank"
               rel="noopener noreferrer"
             >
-              Dashboard
+              Open Dashboard
             </a>
-          </nav>
+          </div>
         </div>
       </header>
 
@@ -178,17 +181,15 @@ export default function Home() {
               <span className="pill">Audit-ready</span>
               <span className="pill">Model-agnostic</span>
             </div>
-
             <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
-              Inference is not default.<br />
+              Inference is not default.
+              <br />
               Inference is permission.
             </h1>
-
             <p className="max-w-2xl text-lg md:text-xl text-zinc-600">
-              SSAP is a decision layer that decides <strong>before</strong> every AI call.
-              Run, block, escalate — with full audit trail and EU AI Act compliance.
+              SSAP is a decision layer that decides <strong>before</strong> every AI call. Run, block,
+              escalate — with full audit trail and EU AI Act compliance.
             </p>
-
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={goToContact} className="btn" type="button">
                 Contact us
@@ -202,7 +203,6 @@ export default function Home() {
                 Open Dashboard
               </a>
             </div>
-
             <div className="muted text-sm">
               Ex-ante decision. NO_INFERENCE as valid outcome. Governance built into runtime.
             </div>
@@ -215,20 +215,20 @@ export default function Home() {
         <div className="container py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="flex flex-col gap-1">
-              <div className="font-semibold text-zinc-900">Ex-ante decisions</div>
-              <div className="text-zinc-600">Before every AI call</div>
+              <div className="text-zinc-900 font-semibold">Policy first</div>
+              <div className="muted">Decide before any call</div>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="font-semibold text-zinc-900">4 Decision paths</div>
-              <div className="text-zinc-600">FULL, NO_INFERENCE, ESCALATE, DEGRADED</div>
+              <div className="text-zinc-900 font-semibold">Audit-ready</div>
+              <div className="muted">Decision trail by design</div>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="font-semibold text-zinc-900">EU AI Act</div>
-              <div className="text-zinc-600">Risk classification & Article 12</div>
+              <div className="text-zinc-900 font-semibold">EU AI Act</div>
+              <div className="muted">Compliance surfaces built-in</div>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="font-semibold text-zinc-900">Audit trail</div>
-              <div className="text-zinc-600">Every decision logged</div>
+              <div className="text-zinc-900 font-semibold">Model-agnostic</div>
+              <div className="muted">Works across providers</div>
             </div>
           </div>
         </div>
@@ -239,702 +239,306 @@ export default function Home() {
         <div className="container py-20">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-                Problem
-              </div>
-              <h2 className="text-2xl md:text-4xl font-semibold tracking-tight leading-tight">
-                Traditional AI systems call models without control
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                Governance is missing from runtime.
               </h2>
-              <p className="muted mt-4 text-lg">
-                No control over risk, value, or regulatory implications.
-                Every request automatically triggers inference — expensive, risky, non-compliant.
+              <p className="mt-4 text-zinc-600 max-w-xl">
+                Most stacks decide <em>after</em> the model responds. SSAP decides <em>before</em> the
+                call — and treats <strong>NO_INFERENCE</strong> as a valid outcome.
+              </p>
+              <div className="mt-6 flex flex-col gap-3 text-zinc-700">
+                <div>• Block low-value inference.</div>
+                <div>• Enforce policies across teams.</div>
+                <div>• Keep a decision trail for audits.</div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+              <div className="text-sm font-semibold text-zinc-900">Decision outcomes</div>
+              <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
+                <div className="flex items-start gap-3">
+                  <span className="pill">RUN</span>
+                  <div className="text-zinc-700">Allow inference and proceed.</div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="pill">BLOCK</span>
+                  <div className="text-zinc-700">Prevent inference (NO_INFERENCE).</div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="pill">ESCALATE</span>
+                  <div className="text-zinc-700">Route to human / stricter path.</div>
+                </div>
+              </div>
+              <div className="muted text-sm mt-4">
+                Built for policy enforcement, cost control, and compliance.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* HOW IT WORKS */}
+      <section id="how" className="border-t border-zinc-200 bg-zinc-50">
+        <div className="container py-20">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">How SSAP works</h2>
+          <p className="muted mt-3 max-w-2xl">
+            SSAP runs as a decision layer that evaluates context and policy before any model call.
+            It produces an outcome — including NO_INFERENCE — and logs the decision trail.
+          </p>
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">1) Evaluate</div>
+              <p className="mt-3 text-zinc-600">
+                SSAP inspects the request context and policy signals to determine whether inference is
+                justified.
               </p>
             </div>
-
-            <div className="card bg-zinc-50">
-              <div className="font-semibold text-lg mb-4">SSAP solution</div>
-              <p className="text-zinc-700">
-                SSAP introduces a <strong>decision before inference</strong>. Every request passes
-                through a decision layer that classifies risk, checks policy, and determines
-                whether AI should even run.
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">2) Decide</div>
+              <p className="mt-3 text-zinc-600">
+                Return RUN, BLOCK, or ESCALATE with reason codes — stable, auditable outcomes.
               </p>
-              <div className="mt-6 pt-6 border-t border-zinc-200">
-                <div className="text-sm text-zinc-600">
-                  "Managing AI systems as decision systems, not as uncontrolled model calls."
-                </div>
-              </div>
             </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">3) Enforce</div>
+              <p className="mt-3 text-zinc-600">
+                Apply decisions at runtime across your stack. Ship governance as an operational layer.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 flex flex-col sm:flex-row gap-3">
+            <button onClick={openPdf} className="btn" type="button">
+              Download one-pager (PDF)
+            </button>
+            <button onClick={goToContact} className="btn-ghost" type="button">
+              Apply for pilot
+            </button>
           </div>
         </div>
       </section>
 
-      {/* CORE IDEA */}
-      <section className="border-t border-zinc-200 bg-zinc-50">
+      {/* WHAT YOU GET */}
+      <section id="what" className="border-t border-zinc-200 bg-white">
         <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Core idea
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Four principles of SSAP
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            <div className="card">
-              <div className="text-3xl font-bold text-zinc-300 mb-3">01</div>
-              <div className="font-semibold">Inference is not default</div>
-              <div className="muted mt-2 text-sm">
-                AI calls are permissions, not automatisms. Must be explicitly approved.
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-3xl font-bold text-zinc-300 mb-3">02</div>
-              <div className="font-semibold">Ex-ante decision</div>
-              <div className="muted mt-2 text-sm">
-                Decision is made before every AI call, not after.
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-3xl font-bold text-zinc-300 mb-3">03</div>
-              <div className="font-semibold">NO_INFERENCE is valid</div>
-              <div className="muted mt-2 text-sm">
-                Blocking inference is a legitimate outcome, not an error.
-              </div>
-            </div>
-            <div className="card">
-              <div className="text-3xl font-bold text-zinc-300 mb-3">04</div>
-              <div className="font-semibold">Governance in runtime</div>
-              <div className="muted mt-2 text-sm">
-                Audit and compliance built into every call, not retroactively.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ARCHITECTURE */}
-      <section id="architecture" className="border-t border-zinc-200 bg-white">
-        <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Runtime architecture
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Four system layers
-          </h2>
-          <p className="muted mt-3 max-w-3xl">
-            SSAP sits between your backend and AI models. Every request passes through the decision layer.
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">What you get</h2>
+          <p className="muted mt-3 max-w-2xl">
+            A governance layer that makes inference a permissioned action — with audit trail and
+            compliance surfaces built in.
           </p>
-
-          <div className="mt-8">
-            <div className="card overflow-hidden">
-              <div className="border-b border-zinc-200 bg-white p-6">
-                <svg
-                  viewBox="0 0 900 200"
-                  className="w-full h-auto"
-                  role="img"
-                  aria-label="SSAP Architecture Diagram"
-                >
-                  {/* Layer boxes */}
-                  <rect x="20" y="20" width="200" height="160" rx="16" fill="#fafafa" stroke="#e4e4e7" strokeWidth="2" />
-                  <rect x="240" y="20" width="200" height="160" rx="16" fill="#fafafa" stroke="#e4e4e7" strokeWidth="2" />
-                  <rect x="460" y="20" width="200" height="160" rx="16" fill="#18181b" stroke="#18181b" strokeWidth="2" />
-                  <rect x="680" y="20" width="200" height="160" rx="16" fill="#fafafa" stroke="#e4e4e7" strokeWidth="2" />
-
-                  {/* Layer labels */}
-                  <text x="120" y="60" textAnchor="middle" fontSize="16" fontWeight="600" fill="#18181b">UI</text>
-                  <text x="120" y="85" textAnchor="middle" fontSize="12" fill="#71717a">Transparency</text>
-                  <text x="120" y="105" textAnchor="middle" fontSize="12" fill="#71717a">Feedback</text>
-
-                  <text x="340" y="60" textAnchor="middle" fontSize="16" fontWeight="600" fill="#18181b">Backend</text>
-                  <text x="340" y="85" textAnchor="middle" fontSize="12" fill="#71717a">Enforcement</text>
-                  <text x="340" y="105" textAnchor="middle" fontSize="12" fill="#71717a">Fallback</text>
-
-                  <text x="560" y="60" textAnchor="middle" fontSize="16" fontWeight="700" fill="#ffffff">SSAP</text>
-                  <text x="560" y="85" textAnchor="middle" fontSize="12" fill="#a1a1aa">Risk</text>
-                  <text x="560" y="105" textAnchor="middle" fontSize="12" fill="#a1a1aa">Policy</text>
-                  <text x="560" y="125" textAnchor="middle" fontSize="12" fill="#a1a1aa">Decision</text>
-                  <text x="560" y="145" textAnchor="middle" fontSize="12" fill="#a1a1aa">Audit</text>
-
-                  <text x="780" y="60" textAnchor="middle" fontSize="16" fontWeight="600" fill="#18181b">AI Models</text>
-                  <text x="780" y="85" textAnchor="middle" fontSize="12" fill="#71717a">Only with FULL</text>
-                  <text x="780" y="105" textAnchor="middle" fontSize="12" fill="#71717a">decision</text>
-
-                  {/* Arrows */}
-                  <defs>
-                    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                      <polygon points="0 0, 10 3.5, 0 7" fill="#71717a" />
-                    </marker>
-                  </defs>
-                  <line x1="220" y1="100" x2="235" y2="100" stroke="#71717a" strokeWidth="2" markerEnd="url(#arrowhead)" />
-                  <line x1="440" y1="100" x2="455" y2="100" stroke="#71717a" strokeWidth="2" markerEnd="url(#arrowhead)" />
-                  <line x1="660" y1="100" x2="675" y2="100" stroke="#71717a" strokeWidth="2" markerEnd="url(#arrowhead)" />
-                </svg>
-              </div>
-
-              <div className="p-6 bg-zinc-50">
-                <div className="text-sm text-zinc-600">
-                  AI models are called <strong>only</strong> when SSAP decision layer returns a FULL decision.
-                  All other decisions (NO_INFERENCE, ESCALATE, DEGRADED) block or redirect the request.
-                </div>
-              </div>
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+              <div className="text-sm font-semibold text-zinc-900">Policy enforcement</div>
+              <p className="mt-3 text-zinc-600">
+                Centralize policy decisions and enforce them consistently across services and teams.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+              <div className="text-sm font-semibold text-zinc-900">Decision trail</div>
+              <p className="mt-3 text-zinc-600">
+                Capture reasoned outcomes for audits, reviews, and operational analysis.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+              <div className="text-sm font-semibold text-zinc-900">Latency control</div>
+              <p className="mt-3 text-zinc-600">
+                Avoid unnecessary calls and reduce tail latency by blocking low-value inference.
+              </p>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+              <div className="text-sm font-semibold text-zinc-900">EU AI Act surfaces</div>
+              <p className="mt-3 text-zinc-600">
+                Build towards compliance with clear, auditable decisions and governance hooks.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* DECISION FLOW */}
-      <section className="border-t border-zinc-200 bg-zinc-50">
+      {/* PILOT PROCESS */}
+      <section id="pilot" className="border-t border-zinc-200 bg-zinc-50">
         <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            End-to-end flow
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            How a request flows through the system
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
-            <div className="card">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center text-sm font-semibold">1</div>
-                <div className="font-semibold">Request</div>
-              </div>
-              <div className="muted text-sm">
-                Request arrives at backend from user interface.
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center text-sm font-semibold">2</div>
-                <div className="font-semibold">Classification</div>
-              </div>
-              <div className="muted text-sm">
-                SSAP classifies risk and checks policy.
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center text-sm font-semibold">3</div>
-                <div className="font-semibold">Decision path</div>
-              </div>
-              <div className="muted text-sm">
-                Determines decision_path: FULL, NO_INFERENCE, ESCALATE, or DEGRADED.
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center text-sm font-semibold">4</div>
-                <div className="font-semibold">Execution</div>
-              </div>
-              <div className="muted text-sm">
-                Backend executes or blocks inference based on decision.
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center text-sm font-semibold">5</div>
-                <div className="font-semibold">UI Status</div>
-              </div>
-              <div className="muted text-sm">
-                User interface displays decision status.
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-zinc-900 text-white flex items-center justify-center text-sm font-semibold">6</div>
-                <div className="font-semibold">Audit</div>
-              </div>
-              <div className="muted text-sm">
-                Every decision is logged to audit trail.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* DECISION PATHS */}
-      <section id="decisions" className="border-t border-zinc-200 bg-white">
-        <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Decision paths
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Four possible decisions
-          </h2>
-          <p className="muted mt-3 max-w-3xl">
-            Every request results in one of four explicit decisions. No implicit execution.
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Pilot process</h2>
+          <p className="muted mt-3 max-w-2xl">
+            We start with a short pilot to validate governance outcomes and operational fit, then
+            scale up to org-wide enforcement.
           </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-            <div className="card border-green-200 bg-green-50/50">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-2xl font-semibold text-green-900">FULL</div>
-                  <div className="text-green-700 mt-1">Inference allowed</div>
-                </div>
-                <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                  Execute
-                </span>
-              </div>
-              <div className="mt-4 text-sm text-green-800">
-                Request passed all checks. AI model is called and result is returned to user.
-              </div>
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">1) Scope</div>
+              <p className="mt-3 text-zinc-600">
+                Pick one workflow where inference risk or cost is measurable.
+              </p>
             </div>
-
-            <div className="card border-red-200 bg-red-50/50">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-2xl font-semibold text-red-900">NO_INFERENCE</div>
-                  <div className="text-red-700 mt-1">Inference blocked</div>
-                </div>
-                <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
-                  Block
-                </span>
-              </div>
-              <div className="mt-4 text-sm text-red-800">
-                Request blocked by policy. AI model is not called. Predefined message returned.
-              </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">2) Deploy</div>
+              <p className="mt-3 text-zinc-600">
+                Add SSAP decision checks before model calls. Turn on audit trail.
+              </p>
             </div>
-
-            <div className="card border-amber-200 bg-amber-50/50">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-2xl font-semibold text-amber-900">ESCALATE</div>
-                  <div className="text-amber-700 mt-1">Human-in-the-loop</div>
-                </div>
-                <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                  Review
-                </span>
-              </div>
-              <div className="mt-4 text-sm text-amber-800">
-                Request requires human review. Forwarded to operator before execution.
-              </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">3) Evaluate</div>
+              <p className="mt-3 text-zinc-600">
+                Review outcomes, reason codes, and governance fit. Decide on rollout.
+              </p>
             </div>
-
-            <div className="card border-zinc-300 bg-zinc-100/50">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-2xl font-semibold text-zinc-900">DEGRADED</div>
-                  <div className="text-zinc-700 mt-1">Safe fallback</div>
-                </div>
-                <span className="inline-flex items-center rounded-full bg-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-800">
-                  Fallback
-                </span>
-              </div>
-              <div className="mt-4 text-sm text-zinc-700">
-                Returns limited or predefined response without full AI inference.
-              </div>
-            </div>
+          </div>
+          <div className="mt-10 flex flex-col sm:flex-row gap-3">
+            <button onClick={goToContact} className="btn" type="button">
+              Contact us
+            </button>
+            <a href="#how" className="btn-ghost no-underline">
+              Learn more →
+            </a>
           </div>
         </div>
       </section>
 
-      {/* EU AI ACT */}
-      <section id="eu-ai-act" className="border-t border-zinc-200 bg-zinc-50">
-        <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Compliance
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            EU AI Act integration
-          </h2>
-          <p className="muted mt-3 max-w-3xl">
-            SSAP is designed with EU AI Act compliance from the ground up. Risk classification, audit trail, and human oversight built into every call.
-          </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-            <div className="card">
-              <div className="font-semibold text-lg mb-4">Risk Classification</div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                  <span className="text-sm"><strong>LOW</strong> — Minimal requirements</span>
+      {/* INTERDICT */}
+      <section id="interdict" className="border-t border-zinc-200 bg-zinc-50">
+        <div className="container py-24">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-8 md:p-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+              <div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="pill">Interdict</span>
+                  <span className="pill">Runtime enforcement</span>
+                  <span className="pill">Fail-open</span>
+                  <span className="pill">1-line SDK</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
-                  <span className="text-sm"><strong>LIMITED</strong> — Transparency obligations</span>
+                <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
+                  Runtime boundary for autonomous agents.
+                </h2>
+                <p className="mt-4 text-zinc-600 max-w-xl">
+                  Interdict makes “do not act” a valid runtime outcome. It stops unsafe actions without changing agent
+                  logic.
+                </p>
+                <div className="mt-6 flex flex-col gap-3 text-zinc-700">
+                  <div>Stops agents from acting when they shouldn’t.</div>
+                  <div>Runs in production and fails open.</div>
+                  <div>Enforced by SSAP decision policies.</div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-orange-500"></span>
-                  <span className="text-sm"><strong>HIGH</strong> — Full compliance requirements</span>
+                <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                  <a href="/interdict" className="btn no-underline">
+                    View Interdict
+                  </a>
+                  <button onClick={goToContact} className="btn-ghost" type="button">
+                    Activate Interdict
+                  </button>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full bg-red-500"></span>
-                  <span className="text-sm"><strong>UNACCEPTABLE</strong> — Prohibited</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="font-semibold text-lg mb-4">Key features</div>
-              <ul className="space-y-3 text-sm text-zinc-700">
-                <li className="flex items-start gap-2">
-                  <span className="text-zinc-400 mt-0.5">•</span>
-                  <span><strong>Annex III mapping</strong> — Automatic domain mapping</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-zinc-400 mt-0.5">•</span>
-                  <span><strong>Article 12 audit trail</strong> — Every decision logged</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-zinc-400 mt-0.5">•</span>
-                  <span><strong>Human escalation</strong> — Mandatory human review for high-risk</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-zinc-400 mt-0.5">•</span>
-                  <span><strong>Kill-switch</strong> — Instant shutdown capability</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* UI TRANSPARENCY */}
-      <section className="border-t border-zinc-200 bg-white">
-        <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Transparency
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            UI for three user levels
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-            <div className="card">
-              <div className="font-semibold text-lg mb-2">End-user</div>
-              <div className="text-sm text-zinc-600 mb-4">Final user</div>
-              <ul className="space-y-2 text-sm text-zinc-700">
-                <li>• AI-assisted labels on responses</li>
-                <li>• Clear indication when AI was not used</li>
-                <li>• Feedback options</li>
-              </ul>
-            </div>
-
-            <div className="card">
-              <div className="font-semibold text-lg mb-2">Operator</div>
-              <div className="text-sm text-zinc-600 mb-4">Operations team</div>
-              <ul className="space-y-2 text-sm text-zinc-700">
-                <li>• Decision details panel</li>
-                <li>• Real-time monitoring</li>
-                <li>• Escalation queue</li>
-              </ul>
-            </div>
-
-            <div className="card">
-              <div className="font-semibold text-lg mb-2">Admin</div>
-              <div className="text-sm text-zinc-600 mb-4">Compliance team</div>
-              <ul className="space-y-2 text-sm text-zinc-700">
-                <li>• Compliance dashboard</li>
-                <li>• Audit export (CSV, JSON)</li>
-                <li>• Policy management</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* BACKEND & OPERATIONS */}
-      <section className="border-t border-zinc-200 bg-zinc-50">
-        <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Operations
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Backend and infrastructure
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            <div className="card">
-              <div className="font-semibold">Middleware enforcement</div>
-              <div className="muted mt-2 text-sm">
-                SSAP integrates as middleware into your existing backend stack.
-              </div>
-            </div>
-            <div className="card">
-              <div className="font-semibold">Policy-as-code</div>
-              <div className="muted mt-2 text-sm">
-                All policies versioned in Git. Audit trail of changes.
-              </div>
-            </div>
-            <div className="card">
-              <div className="font-semibold">Tenant controls</div>
-              <div className="muted mt-2 text-sm">
-                Multi-tenant support with policy and data isolation.
-              </div>
-            </div>
-            <div className="card">
-              <div className="font-semibold">Budget and latency guards</div>
-              <div className="muted mt-2 text-sm">
-                Automatic protection against cost and latency overruns.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ROLLOUT STRATEGY */}
-      <section className="border-t border-zinc-200 bg-white">
-        <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Implementation
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Rollout strategy
-          </h2>
-          <p className="muted mt-3 max-w-3xl">
-            Gradual implementation in 4 phases enables safe transition without disruption.
-          </p>
-
-          <div className="mt-8">
-            <div className="relative">
-              {/* Timeline line */}
-              <div className="hidden md:block absolute left-0 right-0 top-6 h-0.5 bg-zinc-200"></div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="relative">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center text-lg font-semibold z-10">1</div>
-                    <div className="font-semibold">Shadow mode</div>
-                  </div>
-                  <div className="text-sm text-zinc-600">
-                    SSAP observes and logs decisions without enforcement. Baseline analysis.
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center text-lg font-semibold z-10">2</div>
-                    <div className="font-semibold">Low-risk NO_INFERENCE</div>
-                  </div>
-                  <div className="text-sm text-zinc-600">
-                    Activate blocking for low-risk scenarios. Policy validation.
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center text-lg font-semibold z-10">3</div>
-                    <div className="font-semibold">High-risk ESCALATE</div>
-                  </div>
-                  <div className="text-sm text-zinc-600">
-                    Activate escalation for high-risk requests. Human review process.
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 text-white flex items-center justify-center text-lg font-semibold z-10">4</div>
-                    <div className="font-semibold">Full enforcement</div>
-                  </div>
-                  <div className="text-sm text-zinc-600">
-                    Full activation of all policies. Production mode.
-                  </div>
+                <div className="muted text-sm mt-4">
+                  No rule editors. No tuning sliders. Just disciplined action.
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* VALUE PROPOSITION */}
-      <section className="border-t border-zinc-200 bg-zinc-50">
-        <div className="container py-20">
-          <div className="text-xs uppercase tracking-wide text-zinc-500 mb-4">
-            Value
-          </div>
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Why SSAP
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-            <div className="card">
-              <div className="text-4xl font-bold text-zinc-300 mb-4">01</div>
-              <div className="font-semibold text-xl">Regulatory safety</div>
-              <div className="muted mt-2">
-                EU AI Act compliance built from the ground up. Risk classification, audit trail, human oversight.
+            <div className="flex flex-col gap-6">
+              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+                <div className="text-xs font-semibold text-zinc-500 mb-3">
+                  Minimal integration
+                </div>
+                <div className="font-mono text-sm text-zinc-900 whitespace-pre leading-6">
+{`from interdict import boundary
+with boundary():
+    agent.run()`}
+                </div>
+              </div>
+              <div className="rounded-xl border border-zinc-200 bg-white p-6">
+                <div className="text-xs font-semibold text-zinc-500 mb-3">Interdict</div>
+                <div className="flex flex-col gap-3 text-sm text-zinc-700">
+                  <div>Runtime decision boundary, independent of model choice.</div>
+                  <div>Fail-open by design — no new single point of failure.</div>
+                  <div>NO_ACTION is a first-class outcome.</div>
+                </div>
+              </div>
+              <div className="muted text-sm">
+                Interdict is a runtime module of SSAP.
               </div>
             </div>
-
-            <div className="card">
-              <div className="text-4xl font-bold text-zinc-300 mb-4">02</div>
-              <div className="font-semibold text-xl">Cost and latency control</div>
-              <div className="muted mt-2">
-                Automatic budget guards and latency controls. Inference only when needed.
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="text-4xl font-bold text-zinc-300 mb-4">03</div>
-              <div className="font-semibold text-xl">Provable accountability</div>
-              <div className="muted mt-2">
-                Every decision logged with full context. Audit export for regulators.
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="text-4xl font-bold text-zinc-300 mb-4">04</div>
-              <div className="font-semibold text-xl">Model-agnostic</div>
-              <div className="muted mt-2">
-                Future-proof layer. Switch models without changing governance logic.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="border-t border-zinc-200 bg-white">
-        <div className="container py-16">
-          <div className="card bg-zinc-900 text-white flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div>
-              <div className="text-2xl font-semibold tracking-tight">
-                Ready for AI governance?
-              </div>
-              <div className="mt-2 text-zinc-400">
-                Manage AI systems as decision systems.
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href="https://app.ssap.io"
-                className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold border border-white bg-white text-zinc-900 hover:bg-zinc-100 transition-colors no-underline"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Open Dashboard
-              </a>
-              <button
-                onClick={goToContact}
-                className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold border border-zinc-700 bg-transparent text-white hover:border-white transition-colors"
-                type="button"
-              >
-                Contact us
-              </button>
             </div>
           </div>
         </div>
       </section>
 
       {/* CONTACT */}
-      <section id="contact" className="border-t border-zinc-200 bg-zinc-50">
+      <section id="contact" className="border-t border-zinc-200 bg-zinc-50" ref={contactRef as any}>
         <div className="container py-20">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-            Contact us
-          </h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Contact us</h2>
           <p className="muted mt-3 max-w-2xl">
             Send us a message. We'll get back to you within 24 hours.
           </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-10">
-            <div className="card">
-              <div className="text-sm font-semibold">Contact</div>
-              <div className="muted mt-2 text-sm">Or email us directly:</div>
-              <a
-                href="mailto:marko@ssap.io"
-                className="mt-2 inline-block"
-              >
-                marko@ssap.io
-              </a>
-
-              <div className="mt-6 text-sm font-semibold">
-                What we can discuss
-              </div>
-              <ul className="mt-2 space-y-2 text-sm text-zinc-700">
-                <li>• Integrating SSAP into your system</li>
-                <li>• EU AI Act compliance requirements</li>
-                <li>• Custom policy configuration</li>
-                <li>• Pricing and deployment options</li>
-              </ul>
-            </div>
-
-            <div className="card" suppressHydrationWarning>
-              {/* honeypot */}
-              <div className="hidden">
-                <label>
-                  Do not fill
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-10">
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">Pilot / Enterprise</div>
+              <p className="mt-3 text-zinc-600">
+                Tell us what you're building and where governance matters most.
+              </p>
+              <div className="mt-6 flex flex-col gap-3">
+                <label className="text-sm font-semibold text-zinc-900">
+                  Email
                   <input
-                    value={hp}
-                    onChange={(e) => setHp(e.target.value)}
-                    tabIndex={-1}
-                    autoComplete="off"
-                    suppressHydrationWarning
-                  />
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="text-sm font-semibold">Email *</label>
-                  <input
-                    ref={contactEmailRef}
+                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm"
                     value={cEmail}
                     onChange={(e) => setCEmail(e.target.value)}
                     placeholder="you@company.com"
-                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-950"
+                    type="email"
                     autoComplete="email"
-                    inputMode="email"
-                    suppressHydrationWarning
                   />
-                  {!contactEmailOk && cEmail.trim().length > 0 && (
-                    <div className="mt-2 text-xs text-red-600">
-                      Please enter a valid email address.
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold">Company *</label>
+                </label>
+                <label className="text-sm font-semibold text-zinc-900">
+                  Company
                   <input
+                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm"
                     value={cCompany}
                     onChange={(e) => setCCompany(e.target.value)}
                     placeholder="Company name"
-                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-950"
+                    type="text"
                     autoComplete="organization"
-                    suppressHydrationWarning
                   />
-                </div>
-
-                <div>
-                  <label className="text-sm font-semibold">Message *</label>
+                </label>
+                <label className="text-sm font-semibold text-zinc-900">
+                  Message
                   <textarea
+                    className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm min-h-[120px]"
                     value={cMsg}
                     onChange={(e) => setCMsg(e.target.value)}
-                    placeholder="Describe your use case and what you're interested in..."
-                    className="mt-2 min-h-[120px] w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-950"
-                    suppressHydrationWarning
+                    placeholder="What are you building? Where does governance matter?"
                   />
-                  {!contactMsgOk && cMsg.trim().length > 0 && (
-                    <div className="mt-2 text-xs text-red-600">
-                      Message must be at least 10 characters.
-                    </div>
-                  )}
-                </div>
-
-                {cErr && <div className="text-sm text-red-600">{cErr}</div>}
-                {cOk && <div className="text-sm text-green-700">{cOk}</div>}
-
-                <div className="flex items-center justify-between gap-4">
-                  <div className="muted text-xs">
-                    We only use your email to reply.
-                  </div>
+                </label>
+                <div className="flex items-center gap-3">
                   <button
-                    suppressHydrationWarning
-                    onClick={submitContact}
-                    disabled={!contactFormOk || cSubmitting}
-                    className={[
-                      "btn",
-                      !contactFormOk || cSubmitting
-                        ? "opacity-60 cursor-not-allowed"
-                        : "",
-                    ].join(" ")}
+                    className="btn"
+                    type="button"
+                    onClick={sendContact}
+                    disabled={cStatus === "sending" || cStatus === "sent"}
                   >
-                    {cSubmitting ? "Sending..." : "Send"}
+                    {cStatus === "sending" ? "Sending..." : cStatus === "sent" ? "Sent" : "Send message"}
+                  </button>
+                  {cStatus === "error" && cError ? (
+                    <span className="text-sm text-red-600">{cError}</span>
+                  ) : null}
+                  {cStatus === "sent" ? (
+                    <span className="text-sm text-green-700">Thanks — we’ll reply soon.</span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white p-6">
+              <div className="text-sm font-semibold text-zinc-900">Contact</div>
+              <p className="mt-3 text-zinc-600">
+                Prefer email? Reach us at <a className="underline" href="mailto:marko@ssap.io">marko@ssap.io</a>.
+              </p>
+              <div className="mt-8 rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+                <div className="text-sm font-semibold text-zinc-900">Download</div>
+                <p className="mt-3 text-zinc-600">
+                  Get the SSAP one-pager PDF (email gate).
+                </p>
+                <div className="mt-5">
+                  <button className="btn-ghost" type="button" onClick={openPdf}>
+                    Download one-pager →
                   </button>
                 </div>
+              </div>
+              <div className="mt-8 muted text-sm">
+                SSAP: decision layer for inference governance.<br />
+                Interdict: runtime enforcement module.
               </div>
             </div>
           </div>
@@ -943,20 +547,71 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="border-t border-zinc-200 bg-white">
-        <div className="container py-10 flex flex-col md:flex-row justify-between gap-4 text-sm text-zinc-600">
-          <div>
-            <div>© {new Date().getFullYear()} ssap.io</div>
-            <div className="mt-1 text-xs text-zinc-500">
-              Decision layer for AI systems. EU AI Act compliant.
-            </div>
+        <div className="container py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="muted text-sm">
+            © {new Date().getFullYear()} SSAP. All rights reserved.
           </div>
-          <div className="flex gap-6">
-            <a href="/privacy">Privacy</a>
-            <a href="/terms">Terms</a>
-            <a href="mailto:marko@ssap.io">marko@ssap.io</a>
+          <div className="flex items-center gap-4 text-sm">
+            <a className="no-underline text-zinc-700 hover:text-zinc-900" href="/privacy">
+              Privacy
+            </a>
+            <a className="no-underline text-zinc-700 hover:text-zinc-900" href="/terms">
+              Terms
+            </a>
           </div>
         </div>
       </footer>
+
+      {/* PDF MODAL */}
+      {pdfOpen ? (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-lg font-semibold text-zinc-900">Download one-pager</div>
+                <div className="muted text-sm mt-1">
+                  Enter your email to receive the PDF.
+                </div>
+              </div>
+              <button className="btn-ghost" type="button" onClick={closePdf}>
+                Close
+              </button>
+            </div>
+            <div className="mt-6 flex flex-col gap-3">
+              <label className="text-sm font-semibold text-zinc-900">
+                Email
+                <input
+                  className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm"
+                  value={pdfEmail}
+                  onChange={(e) => setPdfEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  type="email"
+                  autoComplete="email"
+                />
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  className="btn"
+                  type="button"
+                  onClick={sendPdf}
+                  disabled={pdfStatus === "sending" || pdfStatus === "sent"}
+                >
+                  {pdfStatus === "sending" ? "Sending..." : pdfStatus === "sent" ? "Sent" : "Send me the PDF"}
+                </button>
+                {pdfStatus === "error" && pdfError ? (
+                  <span className="text-sm text-red-600">{pdfError}</span>
+                ) : null}
+                {pdfStatus === "sent" ? (
+                  <span className="text-sm text-green-700">Check your inbox.</span>
+                ) : null}
+              </div>
+              <div className="muted text-xs mt-2">
+                We only use your email to send the PDF and follow up about the pilot.
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
