@@ -7,6 +7,68 @@ function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
+const PROBLEMS = [
+  { text: "LLMs generate probabilistic outputs." },
+  { text: "Enterprise systems require reproducibility and accountability." },
+  { text: "Unverified claims introduce operational and regulatory risk." },
+  { text: "AI decisions are difficult to explain post-factum." },
+];
+
+const PILLARS = [
+  {
+    title: "Decision Control",
+    subtitle: "SSAP Core",
+    features: [
+      "Formal execution graph (PROBE → FULL → BLOCK)",
+      "Bounded escalation (max 1 retry)",
+      "Policy-versioned decision paths",
+      "Vendor-agnostic model routing",
+    ],
+  },
+  {
+    title: "Claim-Level Integrity",
+    subtitle: "Enforcement",
+    features: [
+      "No unverified claims in Required mode",
+      "Evidence-bound output structure",
+      "Claim-by-claim verification status",
+      "Hard blocking on FAIL",
+    ],
+  },
+  {
+    title: "Deterministic Audit",
+    subtitle: "Replay",
+    features: [
+      "Decision path logging",
+      "Policy snapshotting",
+      "Evidence snapshot references",
+      "Replayable execution traces",
+    ],
+  },
+];
+
+const ENTERPRISE_CLAIMS = [
+  "Deterministic execution layer over LLM systems",
+  "No unverified claims in Required mode",
+  "Replayable and audit-ready AI decisions",
+  "Vendor-agnostic AI governance",
+  "Bounded adaptive risk control",
+];
+
+const CLAIM_EXAMPLE = `{
+  "decision_path": "PROBE_ESCALATED_FULL",
+  "claims": [
+    {
+      "claim_id": "c1",
+      "text": "Interest rate is 3.25%",
+      "evidence_ref": "DOC_2026_TARIFF_V3#section4",
+      "verification_status": "PASS"
+    }
+  ],
+  "policy_version": "FIN_PACK_v1.2",
+  "integrity_mode": "REQUIRED"
+}`;
+
 export default function Home() {
   // Contact form state
   const [cEmail, setCEmail] = useState("");
@@ -134,25 +196,22 @@ export default function Home() {
             />
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-semibold text-zinc-900">SSAP</span>
-              <span className="text-xs text-zinc-500">InferenceGate</span>
+              <span className="text-xs text-zinc-500">Deterministic AI Governance</span>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <nav className="hidden md:flex items-center gap-6 text-sm text-zinc-700">
-              <a className="no-underline hover:text-zinc-900 font-semibold" href="#interdict">
-                Interdict
-              </a>
               <a className="no-underline hover:text-zinc-900" href="#problem">
                 Problem
               </a>
-              <a className="no-underline hover:text-zinc-900" href="#how">
-                Architecture
+              <a className="no-underline hover:text-zinc-900" href="#pillars">
+                Governance
               </a>
-              <a className="no-underline hover:text-zinc-900" href="#what">
-                Decisions
+              <a className="no-underline hover:text-zinc-900" href="#execution">
+                Execution
               </a>
-              <a className="no-underline hover:text-zinc-900" href="#what">
-                EU AI Act
+              <a className="no-underline hover:text-zinc-900" href="#integrity">
+                Integrity
               </a>
               <a className="no-underline hover:text-zinc-900" href="#contact">
                 Contact
@@ -160,7 +219,7 @@ export default function Home() {
             </nav>
             <a
               href="https://app.ssap.io"
-              className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold border border-white bg-white text-zinc-900 hover:bg-zinc-100 transition-colors no-underline"
+              className="inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold border border-zinc-900 bg-zinc-900 text-white hover:bg-zinc-800 transition-colors no-underline"
               target="_blank"
               rel="noopener noreferrer"
             >
@@ -175,36 +234,31 @@ export default function Home() {
         <div className="container py-20 md:py-28">
           <div className="flex flex-col gap-10">
             <div className="flex flex-wrap gap-2">
-              <span className="pill">Decision layer</span>
-              <span className="pill">EU AI Act</span>
-              <span className="pill">Runtime governance</span>
+              <span className="pill">Deterministic</span>
+              <span className="pill">Governance</span>
               <span className="pill">Audit-ready</span>
-              <span className="pill">Model-agnostic</span>
+              <span className="pill">Vendor-agnostic</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
-              Inference is not default.
+              Deterministic Governance
               <br />
-              Inference is permission.
+              for AI Systems.
             </h1>
-            <p className="max-w-2xl text-lg md:text-xl text-zinc-600">
-              SSAP is a decision layer that decides <strong>before</strong> every AI call. Run, block,
-              escalate — with full audit trail and EU AI Act compliance.
-            </p>
+            <div className="max-w-2xl text-lg md:text-xl text-zinc-600 space-y-2">
+              <p>Control when inference happens.</p>
+              <p>Verify every critical claim.</p>
+              <p>Replay every decision.</p>
+            </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <button onClick={goToContact} className="btn" type="button">
-                Contact us
+                Request Governance Brief
               </button>
               <a
-                href="https://app.ssap.io"
+                href="#execution"
                 className="btn-ghost no-underline"
-                target="_blank"
-                rel="noopener noreferrer"
               >
-                Open Dashboard
+                View Execution Model
               </a>
-            </div>
-            <div className="muted text-sm">
-              Ex-ante decision. NO_INFERENCE as valid outcome. Governance built into runtime.
             </div>
           </div>
         </div>
@@ -215,19 +269,19 @@ export default function Home() {
         <div className="container py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="flex flex-col gap-1">
-              <div className="text-zinc-900 font-semibold">Policy first</div>
-              <div className="muted">Decide before any call</div>
+              <div className="text-zinc-900 font-semibold">Decision Control</div>
+              <div className="muted">When inference happens</div>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-zinc-900 font-semibold">Audit-ready</div>
-              <div className="muted">Decision trail by design</div>
+              <div className="text-zinc-900 font-semibold">Claim Integrity</div>
+              <div className="muted">What leaves the system</div>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-zinc-900 font-semibold">EU AI Act</div>
-              <div className="muted">Compliance surfaces built-in</div>
+              <div className="text-zinc-900 font-semibold">Audit-Ready</div>
+              <div className="muted">Replayable decisions</div>
             </div>
             <div className="flex flex-col gap-1">
-              <div className="text-zinc-900 font-semibold">Model-agnostic</div>
+              <div className="text-zinc-900 font-semibold">Vendor-Agnostic</div>
               <div className="muted">Works across providers</div>
             </div>
           </div>
@@ -237,238 +291,247 @@ export default function Home() {
       {/* PROBLEM */}
       <section id="problem" className="border-t border-zinc-200 bg-white">
         <div className="container py-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                Governance is missing from runtime.
-              </h2>
-              <p className="mt-4 text-zinc-600 max-w-xl">
-                Most stacks decide <em>after</em> the model responds. SSAP decides <em>before</em> the
-                call — and treats <strong>NO_INFERENCE</strong> as a valid outcome.
-              </p>
-              <div className="mt-6 flex flex-col gap-3 text-zinc-700">
-                <div>• Block low-value inference.</div>
-                <div>• Enforce policies across teams.</div>
-                <div>• Keep a decision trail for audits.</div>
-              </div>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
-              <div className="text-sm font-semibold text-zinc-900">Decision outcomes</div>
-              <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
-                <div className="flex items-start gap-3">
-                  <span className="pill">RUN</span>
-                  <div className="text-zinc-700">Allow inference and proceed.</div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="pill">BLOCK</span>
-                  <div className="text-zinc-700">Prevent inference (NO_INFERENCE).</div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="pill">ESCALATE</span>
-                  <div className="text-zinc-700">Route to human / stricter path.</div>
-                </div>
-              </div>
-              <div className="muted text-sm mt-4">
-                Built for policy enforcement, cost control, and compliance.
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* HOW IT WORKS */}
-      <section id="how" className="border-t border-zinc-200 bg-zinc-50">
-        <div className="container py-20">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">How SSAP works</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            The Problem
+          </h2>
           <p className="muted mt-3 max-w-2xl">
-            SSAP runs as a decision layer that evaluates context and policy before any model call.
-            It produces an outcome — including NO_INFERENCE — and logs the decision trail.
-          </p>
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">1) Evaluate</div>
-              <p className="mt-3 text-zinc-600">
-                SSAP inspects the request context and policy signals to determine whether inference is
-                justified.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">2) Decide</div>
-              <p className="mt-3 text-zinc-600">
-                Return RUN, BLOCK, or ESCALATE with reason codes — stable, auditable outcomes.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">3) Enforce</div>
-              <p className="mt-3 text-zinc-600">
-                Apply decisions at runtime across your stack. Ship governance as an operational layer.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-10 flex flex-col sm:flex-row gap-3">
-            <button onClick={openPdf} className="btn" type="button">
-              Download one-pager (PDF)
-            </button>
-            <button onClick={goToContact} className="btn-ghost" type="button">
-              Apply for pilot
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* WHAT YOU GET */}
-      <section id="what" className="border-t border-zinc-200 bg-white">
-        <div className="container py-20">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">What you get</h2>
-          <p className="muted mt-3 max-w-2xl">
-            A governance layer that makes inference a permissioned action — with audit trail and
-            compliance surfaces built in.
+            AI systems in enterprise environments face fundamental governance challenges.
           </p>
           <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
-              <div className="text-sm font-semibold text-zinc-900">Policy enforcement</div>
-              <p className="mt-3 text-zinc-600">
-                Centralize policy decisions and enforce them consistently across services and teams.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
-              <div className="text-sm font-semibold text-zinc-900">Decision trail</div>
-              <p className="mt-3 text-zinc-600">
-                Capture reasoned outcomes for audits, reviews, and operational analysis.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
-              <div className="text-sm font-semibold text-zinc-900">Latency control</div>
-              <p className="mt-3 text-zinc-600">
-                Avoid unnecessary calls and reduce tail latency by blocking low-value inference.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
-              <div className="text-sm font-semibold text-zinc-900">EU AI Act surfaces</div>
-              <p className="mt-3 text-zinc-600">
-                Build towards compliance with clear, auditable decisions and governance hooks.
-              </p>
-            </div>
+            {PROBLEMS.map((problem, index) => (
+              <div key={index} className="rounded-xl border border-red-100 bg-red-50/50 p-6">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-sm font-semibold flex-shrink-0">
+                    !
+                  </div>
+                  <p className="text-zinc-700">{problem.text}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* PILOT PROCESS */}
-      <section id="pilot" className="border-t border-zinc-200 bg-zinc-50">
+      {/* THREE GOVERNANCE PILLARS */}
+      <section id="pillars" className="border-t border-zinc-200 bg-zinc-50">
         <div className="container py-20">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Pilot process</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            Three Governance Pillars
+          </h2>
           <p className="muted mt-3 max-w-2xl">
-            We start with a short pilot to validate governance outcomes and operational fit, then
-            scale up to org-wide enforcement.
+            SSAP provides a complete governance framework for AI systems.
           </p>
           <div className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">1) Scope</div>
-              <p className="mt-3 text-zinc-600">
-                Pick one workflow where inference risk or cost is measurable.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">2) Deploy</div>
-              <p className="mt-3 text-zinc-600">
-                Add SSAP decision checks before model calls. Turn on audit trail.
-              </p>
-            </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">3) Evaluate</div>
-              <p className="mt-3 text-zinc-600">
-                Review outcomes, reason codes, and governance fit. Decide on rollout.
-              </p>
-            </div>
-          </div>
-          <div className="mt-10 flex flex-col sm:flex-row gap-3">
-            <button onClick={goToContact} className="btn" type="button">
-              Contact us
-            </button>
-            <a href="#how" className="btn-ghost no-underline">
-              Learn more →
-            </a>
+            {PILLARS.map((pillar) => (
+              <div key={pillar.title} className="rounded-xl border border-zinc-200 bg-white p-6">
+                <div className="text-sm font-semibold text-zinc-900">{pillar.title}</div>
+                <div className="text-xs text-zinc-500 mt-1">{pillar.subtitle}</div>
+                <ul className="mt-4 space-y-2">
+                  {pillar.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-zinc-600">
+                      <span className="text-green-600 mt-0.5">✓</span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* INTERDICT */}
-      <section id="interdict" className="border-t border-zinc-200 bg-zinc-50">
-        <div className="container py-24">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-8 md:p-10">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
-              <div>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="pill">Interdict</span>
-                  <span className="pill">Runtime enforcement</span>
-                  <span className="pill">Fail-open</span>
-                  <span className="pill">1-line SDK</span>
+      {/* EXECUTION GRAPH */}
+      <section id="execution" className="border-t border-zinc-200 bg-white">
+        <div className="container py-20">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            Execution Graph
+          </h2>
+          <p className="muted mt-3 max-w-2xl">
+            Bounded, deterministic control over every AI decision.
+          </p>
+          <div className="mt-10 rounded-xl border border-zinc-200 bg-zinc-50 p-8 overflow-x-auto">
+            <div className="min-w-[600px]">
+              {/* Main Flow */}
+              <div className="flex items-center justify-center gap-3 mb-8">
+                <div className="px-4 py-2 bg-blue-100 border border-blue-200 rounded-lg">
+                  <span className="font-mono text-blue-700 font-semibold text-sm">PROBE</span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
-                  Runtime boundary for autonomous agents.
-                </h2>
-                <p className="mt-4 text-zinc-600 max-w-xl">
-                  Interdict makes “do not act” a valid runtime outcome. It stops unsafe actions without changing agent
-                  logic.
-                </p>
-                <div className="mt-6 flex flex-col gap-3 text-zinc-700">
-                  <div>Stops agents from acting when they shouldn’t.</div>
-                  <div>Runs in production and fails open.</div>
-                  <div>Enforced by SSAP decision policies.</div>
+                <span className="text-zinc-400">→</span>
+                <div className="px-4 py-2 bg-purple-100 border border-purple-200 rounded-lg">
+                  <span className="font-mono text-purple-700 font-semibold text-sm">LLM_PROBE</span>
                 </div>
-                <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                  <a href="/interdict" className="btn no-underline">
-                    View Interdict
-                  </a>
-                  <button onClick={goToContact} className="btn-ghost" type="button">
-                    Activate Interdict
-                  </button>
-                </div>
-                <div className="muted text-sm mt-4">
-                  No rule editors. No tuning sliders. Just disciplined action.
+                <span className="text-zinc-400">→</span>
+                <div className="px-4 py-2 bg-yellow-100 border border-yellow-200 rounded-lg">
+                  <span className="font-mono text-yellow-700 font-semibold text-sm">INTEGRITY</span>
                 </div>
               </div>
-            <div className="flex flex-col gap-6">
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
-                <div className="text-xs font-semibold text-zinc-500 mb-3">
-                  Minimal integration
+
+              {/* Branch paths */}
+              <div className="grid grid-cols-2 gap-8 max-w-xl mx-auto mb-8">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="px-3 py-1.5 bg-green-100 border border-green-200 rounded-lg">
+                      <span className="font-mono text-green-700 text-xs">PASS</span>
+                    </div>
+                    <span className="text-zinc-400">→</span>
+                    <div className="px-3 py-1.5 bg-green-200 border border-green-300 rounded-lg">
+                      <span className="font-mono text-green-800 text-xs font-semibold">RETURN</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-500">Verified response delivered</p>
                 </div>
-                <div className="font-mono text-sm text-zinc-900 whitespace-pre leading-6">
-{`from interdict import boundary
-with boundary():
-    agent.run()`}
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <div className="px-3 py-1.5 bg-red-100 border border-red-200 rounded-lg">
+                      <span className="font-mono text-red-700 text-xs">FAIL</span>
+                    </div>
+                    <span className="text-zinc-400">→</span>
+                    <div className="px-3 py-1.5 bg-orange-100 border border-orange-200 rounded-lg">
+                      <span className="font-mono text-orange-700 text-xs">ESCALATE</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-zinc-500">Bounded retry initiated</p>
                 </div>
               </div>
-              <div className="rounded-xl border border-zinc-200 bg-white p-6">
-                <div className="text-xs font-semibold text-zinc-500 mb-3">Interdict</div>
-                <div className="flex flex-col gap-3 text-sm text-zinc-700">
-                  <div>Runtime decision boundary, independent of model choice.</div>
-                  <div>Fail-open by design — no new single point of failure.</div>
-                  <div>NO_ACTION is a first-class outcome.</div>
+
+              {/* Escalation Flow */}
+              <div className="pt-6 border-t border-zinc-200">
+                <p className="text-center text-zinc-500 text-xs mb-4">Escalation Path (max 1 retry)</p>
+                <div className="flex items-center justify-center gap-3">
+                  <div className="px-4 py-2 bg-orange-100 border border-orange-200 rounded-lg">
+                    <span className="font-mono text-orange-700 font-semibold text-sm">FULL</span>
+                  </div>
+                  <span className="text-zinc-400">→</span>
+                  <div className="px-4 py-2 bg-yellow-100 border border-yellow-200 rounded-lg">
+                    <span className="font-mono text-yellow-700 font-semibold text-sm">INTEGRITY</span>
+                  </div>
+                  <span className="text-zinc-400">→</span>
+                  <div className="flex gap-3">
+                    <div className="px-3 py-1.5 bg-green-200 border border-green-300 rounded-lg">
+                      <span className="font-mono text-green-800 text-xs">PASS → RETURN</span>
+                    </div>
+                    <div className="px-3 py-1.5 bg-red-200 border border-red-300 rounded-lg">
+                      <span className="font-mono text-red-800 text-xs">FAIL → BLOCK</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="muted text-sm">
-                Interdict is a runtime module of SSAP.
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CLAIM-LEVEL VERIFICATION */}
+      <section id="integrity" className="border-t border-zinc-200 bg-zinc-50">
+        <div className="container py-20">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            Claim-Level Verification
+          </h2>
+          <p className="muted mt-3 max-w-2xl">
+            Every claim is verified against evidence before leaving the system.
+          </p>
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 text-sm font-semibold flex-shrink-0">
+                  1
+                </div>
+                <div>
+                  <div className="font-semibold text-zinc-900">Evidence-Bound Output</div>
+                  <p className="mt-1 text-sm text-zinc-600">Each claim is linked to a specific evidence reference with document ID and section.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 text-sm font-semibold flex-shrink-0">
+                  2
+                </div>
+                <div>
+                  <div className="font-semibold text-zinc-900">Verification Status</div>
+                  <p className="mt-1 text-sm text-zinc-600">Claim-by-claim verification with PASS/FAIL status. Hard blocking on unverified claims in Required mode.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-600 text-sm font-semibold flex-shrink-0">
+                  3
+                </div>
+                <div>
+                  <div className="font-semibold text-zinc-900">Decision Path Tracing</div>
+                  <p className="mt-1 text-sm text-zinc-600">Full audit trail with policy version, integrity mode, and execution path for every request.</p>
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-zinc-100 border-b border-zinc-200">
+                <span className="text-xs font-semibold text-zinc-500">Structured Output Example</span>
+              </div>
+              <pre className="p-4 text-xs text-zinc-700 overflow-x-auto">
+                <code>{CLAIM_EXAMPLE}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ENTERPRISE CLAIMS */}
+      <section className="border-t border-zinc-200 bg-white">
+        <div className="container py-20">
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+            Enterprise-Grade Governance
+          </h2>
+          <p className="muted mt-3 max-w-2xl">
+            Defensible claims backed by deterministic execution.
+          </p>
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {ENTERPRISE_CLAIMS.map((claim, index) => (
+              <div key={index} className="flex items-center gap-3 p-4 rounded-lg bg-zinc-50 border border-zinc-200">
+                <span className="text-green-600">✓</span>
+                <span className="text-sm text-zinc-700">{claim}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECONDARY BENEFITS */}
+      <section className="border-t border-zinc-200 bg-zinc-50">
+        <div className="container py-16">
+          <div className="text-center mb-8">
+            <h3 className="text-lg font-semibold text-zinc-500">Secondary Benefits</h3>
+            <p className="text-sm text-zinc-400 mt-1">Additional advantages from structured inference control.</p>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-4">
+              <div className="text-sm font-medium text-zinc-700">Cost Optimization</div>
+              <div className="text-xs text-zinc-500 mt-1">Side-effect of structured control</div>
+            </div>
+            <div className="text-center p-4">
+              <div className="text-sm font-medium text-zinc-700">Latency Control</div>
+              <div className="text-xs text-zinc-500 mt-1">Bounded escalation paths</div>
+            </div>
+            <div className="text-center p-4">
+              <div className="text-sm font-medium text-zinc-700">Risk Adaptation</div>
+              <div className="text-xs text-zinc-500 mt-1">Domain-based thresholding</div>
+            </div>
+            <div className="text-center p-4">
+              <div className="text-sm font-medium text-zinc-700">Model Portability</div>
+              <div className="text-xs text-zinc-500 mt-1">Cross-model governance</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* CONTACT */}
-      <section id="contact" className="border-t border-zinc-200 bg-zinc-50" ref={contactRef as any}>
+      <section id="contact" className="border-t border-zinc-200 bg-white" ref={contactRef as any}>
         <div className="container py-20">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Contact us</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">Request Governance Brief</h2>
           <p className="muted mt-3 max-w-2xl">
-            Send us a message. We'll get back to you within 24 hours.
+            Tell us about your AI governance requirements. We'll send you a tailored brief within 24 hours.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-10">
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">Pilot / Enterprise</div>
-              <p className="mt-3 text-zinc-600">
-                Tell us what you're building and where governance matters most.
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+              <div className="text-sm font-semibold text-zinc-900">Enterprise Inquiry</div>
+              <p className="mt-3 text-zinc-600 text-sm">
+                Describe your governance challenges and requirements.
               </p>
               <div className="mt-6 flex flex-col gap-3">
                 <label className="text-sm font-semibold text-zinc-900">
@@ -499,7 +562,7 @@ with boundary():
                     className="mt-2 w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm min-h-[120px]"
                     value={cMsg}
                     onChange={(e) => setCMsg(e.target.value)}
-                    placeholder="What are you building? Where does governance matter?"
+                    placeholder="Describe your AI governance requirements..."
                   />
                 </label>
                 <div className="flex items-center gap-3">
@@ -509,36 +572,42 @@ with boundary():
                     onClick={sendContact}
                     disabled={cStatus === "sending" || cStatus === "sent"}
                   >
-                    {cStatus === "sending" ? "Sending..." : cStatus === "sent" ? "Sent" : "Send message"}
+                    {cStatus === "sending" ? "Sending..." : cStatus === "sent" ? "Sent" : "Request Brief"}
                   </button>
                   {cStatus === "error" && cError ? (
                     <span className="text-sm text-red-600">{cError}</span>
                   ) : null}
                   {cStatus === "sent" ? (
-                    <span className="text-sm text-green-700">Thanks — we’ll reply soon.</span>
+                    <span className="text-sm text-green-700">Thanks — we'll reply within 24 hours.</span>
                   ) : null}
                 </div>
               </div>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-6">
-              <div className="text-sm font-semibold text-zinc-900">Contact</div>
-              <p className="mt-3 text-zinc-600">
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6">
+              <div className="text-sm font-semibold text-zinc-900">Direct Contact</div>
+              <p className="mt-3 text-zinc-600 text-sm">
                 Prefer email? Reach us at <a className="underline" href="mailto:marko@ssap.io">marko@ssap.io</a>.
               </p>
-              <div className="mt-8 rounded-xl border border-zinc-200 bg-zinc-50 p-6">
-                <div className="text-sm font-semibold text-zinc-900">Download</div>
-                <p className="mt-3 text-zinc-600">
-                  Get the SSAP one-pager PDF (email gate).
+              <div className="mt-8 rounded-xl border border-zinc-200 bg-white p-6">
+                <div className="text-sm font-semibold text-zinc-900">Documentation</div>
+                <p className="mt-3 text-zinc-600 text-sm">
+                  Download the SSAP governance overview (PDF).
                 </p>
                 <div className="mt-5">
                   <button className="btn-ghost" type="button" onClick={openPdf}>
-                    Download one-pager →
+                    Download PDF →
                   </button>
                 </div>
               </div>
-              <div className="mt-8 muted text-sm">
-                SSAP: decision layer for inference governance.<br />
-                Interdict: runtime enforcement module.
+              <div className="mt-8">
+                <a
+                  href="https://app.ssap.io"
+                  className="btn no-underline inline-flex"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Open Dashboard
+                </a>
               </div>
             </div>
           </div>
@@ -546,10 +615,10 @@ with boundary():
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-zinc-200 bg-white">
+      <footer className="border-t border-zinc-200 bg-zinc-50">
         <div className="container py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="muted text-sm">
-            © {new Date().getFullYear()} SSAP. All rights reserved.
+          <div className="text-sm text-zinc-600">
+            SSAP — Deterministic Infrastructure for AI Systems
           </div>
           <div className="flex items-center gap-4 text-sm">
             <a className="no-underline text-zinc-700 hover:text-zinc-900" href="/privacy">
@@ -568,7 +637,7 @@ with boundary():
           <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-lg font-semibold text-zinc-900">Download one-pager</div>
+                <div className="text-lg font-semibold text-zinc-900">Download Governance Brief</div>
                 <div className="muted text-sm mt-1">
                   Enter your email to receive the PDF.
                 </div>
@@ -606,7 +675,7 @@ with boundary():
                 ) : null}
               </div>
               <div className="muted text-xs mt-2">
-                We only use your email to send the PDF and follow up about the pilot.
+                We only use your email to send the PDF and follow up about governance requirements.
               </div>
             </div>
           </div>
