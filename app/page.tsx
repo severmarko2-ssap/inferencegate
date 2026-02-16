@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useMemo, useRef, useState } from "react";
 import {
   Shield,
@@ -163,7 +164,7 @@ export default function Home() {
       <nav className="border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-blue-500" />
+            <Image src="/ssap-logo_trans.png" alt="SSAP" width={40} height={40} className="h-10 w-10" />
             <div className="flex flex-col leading-tight">
               <span className="text-lg font-bold text-white">SSAP</span>
               <span className="text-xs text-slate-400">Deterministic AI Governance</span>
@@ -424,7 +425,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-slate-700/50 py-10">
         <div className="container flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2"><Shield className="h-6 w-6 text-blue-500" /><span className="font-bold text-white">SSAP</span></div>
+          <div className="flex items-center gap-2"><Image src="/ssap-logo_trans.png" alt="SSAP" width={28} height={28} className="h-7 w-7" /><span className="font-bold text-white">SSAP</span></div>
           <p className="text-sm text-slate-400">SSAP — Deterministic Infrastructure for AI Systems</p>
           <div className="flex items-center gap-4 text-sm text-slate-400"><a href="/privacy" className="hover:text-white transition-colors">Privacy</a><a href="/terms" className="hover:text-white transition-colors">Terms</a></div>
         </div>
